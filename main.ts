@@ -17,12 +17,22 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+// The 8-byte PNG file signature, as hex: 89 'P' 'N' 'G' CR LF SUB LF.
+// Naming it keeps the magic bytes out of the validation logic below.
+const PNG_SIGNATURE_HEX = '89504e470d0a1a0a';
+
+/** True when `bytes` starts with the PNG file signature. */
+function isPng(bytes: Buffer): boolean {
+  return bytes.subarray(0, 8).toString('hex') === PNG_SIGNATURE_HEX;
+}
+
 const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 const encoded = readFileSync(new URL('./entry.png.b64', import.meta.url), 'utf8');
 const png = Buffer.from(encoded.trim(), 'base64');
 
+// Decode path: base64 text -> raw bytes -> signature check -> write.
 // The gate only accepts a whole PNG: refuse to write anything else.
-if (png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
+if (!isPng(png)) {
   throw new Error('entry.png.b64 does not decode to a PNG');
 }
 
